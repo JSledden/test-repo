@@ -1,23 +1,31 @@
 using System;
-using System.Security.Cryptography;
+using System.Data.SqlClient;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
 namespace TestRepo
 {
     class Program
     {
-        // Hardcoded "secret" - often flagged by code scanners
-        private const string ApiKey = "12345-ABCDE";
-
         static void Main(string[] args)
         {
-            Console.WriteLine("This is a test program for Dependabot and GitHub Code Scans.");
+            string userInput = "unsafe_input'; DROP TABLE Users; --";
 
-            // Use obsolete/Dangerous crypto API example to trigger scan warnings
-            using (var md5 = MD5.Create())  // MD5 is insecure, often reported by scanners
+            // Unsafe SQL command concatenation - SQL Injection target
+            string query = "SELECT * FROM Users WHERE Name = '" + userInput + "'";
+            using (SqlConnection conn = new SqlConnection("Data Source=.;Initial Catalog=TestDb;Integrated Security=True"))
             {
-                var inputBytes = System.Text.Encoding.UTF8.GetBytes("test input");
-                var hashBytes = md5.ComputeHash(inputBytes);
-                Console.WriteLine("MD5 hash: " + BitConverter.ToString(hashBytes));
+                SqlCommand cmd = new SqlCommand(query, conn);
+                Console.WriteLine("Query: " + query);
+            }
+
+            // Unsafe deserialization - known vulnerability pattern
+            byte[] serializedData = new byte[] { /* some bytes */ };
+            BinaryFormatter formatter = new BinaryFormatter();
+            using (MemoryStream ms = new MemoryStream(serializedData))
+            {
+                var obj = formatter.Deserialize(ms);
+                Console.WriteLine("Deserialized object: " + obj);
             }
         }
     }
